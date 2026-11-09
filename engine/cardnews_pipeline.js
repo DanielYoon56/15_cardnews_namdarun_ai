@@ -215,4 +215,4 @@ function getReport(folder) {
   };
 }
 
-module.exports = { startCreateJob, rerender, listReports, getReport, getJob: (id) => jobs.get(id) };
+module.exports = { startCreateJob, rerender, listReports, getReport, resolveFolder, getJob: (id) => jobs.get(id) };

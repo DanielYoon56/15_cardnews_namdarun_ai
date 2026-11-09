@@ -215,6 +215,24 @@
               <textarea id="cn-spec-text" class="custom-input" rows="14" spellcheck="false"></textarea>
               <button class="generate-btn" id="cn-rerender-btn" style="margin-top: 8px;"><span>🔁</span> 수정 내용으로 다시 렌더링</button>
             </div>
+
+            <!-- 인스타그램 업로드 -->
+            <div class="cn-ig">
+              <div class="cn-ig-head">
+                <span>📸 인스타그램에 올리기</span>
+                <span id="cn-ig-status" class="cn-ig-status">연결 확인 중...</span>
+              </div>
+              <label class="cn-label">캡션 (최대 2,200자 · 해시태그 30개)</label>
+              <textarea id="cn-ig-caption" class="custom-input" rows="6" placeholder="게시물 본문과 해시태그를 입력하세요."></textarea>
+              <div class="cn-ig-meta"><span id="cn-ig-counter">0자 · #0</span></div>
+              <button class="generate-btn" id="cn-ig-btn" style="background: linear-gradient(135deg, #F58529 0%, #DD2A7B 50%, #8134AF 100%);">
+                <span>📤</span> 인스타그램 캐러셀 게시
+              </button>
+              <div id="cn-ig-progress" class="cn-progress" style="display: none;">
+                <div id="cn-ig-step" class="cn-progress-step"></div>
+                <pre id="cn-ig-log"></pre>
+              </div>
+            </div>
           </div>
         </div>
       </section>

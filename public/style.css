@@ -621,3 +621,12 @@ body {
 .cn-small-btn:hover { border-color: #F472B6; }
 .cn-editor textarea { width: 100%; font-family: Consolas, 'D2Coding', monospace; font-size: 12px; line-height: 1.45; }
 @media (max-width: 1280px) { .cn-layout { grid-template-columns: 1fr; } .cn-viewer { position: static; } }
+.cn-ig { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border-subtle); padding-top: 14px; margin-top: 4px; }
+.cn-ig-head { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 800; color: var(--text-main); }
+.cn-ig-status { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: var(--bg-surface-elevated); color: var(--text-muted); }
+.cn-ig-status.ok { color: #34D399; }
+.cn-ig-status.warn { color: #FBBF24; }
+.cn-ig textarea { width: 100%; line-height: 1.5; }
+.cn-ig-meta { display: flex; justify-content: flex-end; font-size: 11px; color: var(--text-muted); margin-top: -4px; }
+.cn-ig-meta .over { color: #F87171; font-weight: 700; }
+.cn-ig-done a { color: #F9A8D4; font-weight: 700; }

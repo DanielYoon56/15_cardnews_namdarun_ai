@@ -8,6 +8,7 @@ const { generateCardNewsScript, generateAdvancedCardScript, analyzeReelsUrl } = 
 const { transcribeReelsAudio, analyzeCardImages, generateMultimodalInsight } = require('./engine/multimodal_analyzer');
 const { chromium } = require('playwright');
 const cardnewsPipeline = require('./engine/cardnews_pipeline');
+const instagramPublisher = require('./engine/instagram_publisher');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -523,6 +524,28 @@ app.post('/api/cardnews/rerender', async (req, res) => {
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
+});
+
+// 10. 인스타그램 캐러셀 업로드 API (Instagram Graph API)
+app.get('/api/instagram/status', async (req, res) => {
+  res.json({ success: true, ...(await instagramPublisher.status()) });
+});
+
+app.post('/api/instagram/publish', (req, res) => {
+  try {
+    const { folder, caption } = req.body;
+    const reportDir = cardnewsPipeline.resolveFolder(folder);
+    const job = instagramPublisher.startPublishJob({ reportDir, folder, caption: String(caption || '') });
+    res.json({ success: true, jobId: job.id });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/instagram/jobs/:id', (req, res) => {
+  const job = instagramPublisher.getJob(req.params.id);
+  if (!job) return res.status(404).json({ error: '작업을 찾을 수 없습니다.' });
+  res.json({ success: true, job });
 });
 
 app.listen(PORT, () => {
