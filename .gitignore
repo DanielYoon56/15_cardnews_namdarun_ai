@@ -28,3 +28,6 @@ assets/dashboard_*.png
 .system_generated/
 tmp/
 scratch/
+
+# Generated CardNews/Report Outputs (산출물)
+outputs/2*/

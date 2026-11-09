@@ -1,0 +1,61 @@
+/*
+ * Reference Card Style (templates/reference_card.png)
+ * 풀블리드 사진 + 하단 그라데이션 + 핑크 태그박스 + 화이트 볼드 헤드라인(핑크 하이라이트)
+ * 캔버스 1080x1350, Pretendard. engine/card_renderer.js 가 이 파일을 읽어 렌더링한다.
+ */
+:root {
+  --pink: #F7A8CB;
+  --pink-box: rgba(214, 96, 150, 0.92);
+  --ink: #1a1014;
+  --glass: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.14);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { width: 1080px; height: 1350px; font-family: 'Pretendard', -apple-system, system-ui, sans-serif;
+  word-break: keep-all; overflow-wrap: break-word; letter-spacing: -0.03em; color: #fff; background: #0F1115; }
+
+.slide { position: relative; width: 1080px; height: 1350px; overflow: hidden; background: #15161b; }
+.bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.shade { position: absolute; inset: 0; }
+.slide.cover .shade { background: linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.88) 100%); }
+.slide.body .shade { background: linear-gradient(180deg, rgba(10,10,14,0.55) 0%, rgba(10,10,14,0.45) 30%, rgba(10,10,14,0.85) 62%, rgba(10,10,14,0.95) 100%); }
+
+.top { position: absolute; top: 56px; left: 64px; right: 64px; display: flex; justify-content: space-between; align-items: center; z-index: 2; }
+.brand { font-size: 30px; font-weight: 900; color: var(--pink); letter-spacing: -0.02em; text-shadow: 0 2px 10px rgba(0,0,0,.4); }
+.pager { background: rgba(40,40,46,0.6); backdrop-filter: blur(8px); padding: 10px 22px; border-radius: 999px; font-size: 24px; font-weight: 700; }
+
+.content { position: absolute; left: 72px; right: 72px; bottom: 110px; z-index: 2; }
+.tag { display: inline-block; background: var(--pink-box); color: #fff; font-size: 30px; font-weight: 800;
+  padding: 10px 20px; border-radius: 6px; margin-bottom: 30px; }
+.hero { font-size: 92px; font-weight: 900; line-height: 1.2; letter-spacing: -0.04em; text-shadow: 0 4px 24px rgba(0,0,0,.45); }
+.title { font-size: 82px; font-weight: 900; line-height: 1.18; letter-spacing: -0.04em; text-shadow: 0 4px 24px rgba(0,0,0,.45); margin-bottom: 44px; }
+.hl { color: var(--pink); }
+.meta-row { margin-top: 40px; display: flex; justify-content: space-between; gap: 24px; font-size: 26px; font-weight: 600; color: rgba(255,255,255,.8); }
+.swipe { color: var(--pink); font-weight: 800; white-space: nowrap; }
+
+.points { display: flex; flex-direction: column; gap: 20px; }
+.point { display: flex; gap: 26px; align-items: flex-start; background: var(--glass); border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px); border-radius: 22px; padding: 28px 32px; }
+.num { flex: none; width: 58px; height: 58px; border-radius: 50%; background: var(--pink); color: var(--ink); font-size: 24px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center; }
+.p-title { font-size: 34px; font-weight: 800; line-height: 1.3; margin-bottom: 8px; }
+.p-desc { font-size: 26px; font-weight: 500; line-height: 1.5; color: rgba(255,255,255,.82); }
+
+/* 항목이 많은 슬라이드(5개 이상)는 자동 컴팩트 */
+.points.compact { gap: 14px; }
+.points.compact .point { padding: 20px 26px; gap: 20px; }
+.points.compact .num { width: 48px; height: 48px; font-size: 20px; }
+.points.compact .p-title { font-size: 29px; margin-bottom: 4px; }
+.points.compact .p-desc { font-size: 22px; line-height: 1.45; }
+
+.timeline { display: flex; flex-direction: column; gap: 22px; }
+.tl-item { display: flex; gap: 30px; align-items: stretch; background: var(--glass); border: 1px solid var(--glass-border);
+  border-radius: 22px; padding: 30px 32px; }
+.tl-date { flex: none; width: 170px; font-size: 54px; font-weight: 900; color: var(--pink); line-height: 1.05; border-right: 2px solid rgba(255,255,255,.18); }
+.tl-date small { display: block; font-size: 24px; font-weight: 700; color: rgba(255,255,255,.75); margin-top: 8px; }
+
+.summary { background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.16); border-radius: 22px; padding: 34px 36px;
+  display: flex; flex-direction: column; gap: 20px; font-size: 31px; font-weight: 700; line-height: 1.4; }
+.summary .hl { font-weight: 800; }
+.bookmark { margin-top: 26px; border: 3px dashed var(--pink); border-radius: 20px; padding: 26px; text-align: center; font-size: 32px; font-weight: 800; }
+.source { margin-top: 22px; font-size: 20px; font-weight: 500; color: rgba(255,255,255,.55); text-align: center; }

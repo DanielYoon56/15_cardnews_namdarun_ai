@@ -7,12 +7,13 @@ const { fetchAutoRealEstateNews } = require('./collectors/estate_collector');
 const { generateCardNewsScript, generateAdvancedCardScript, analyzeReelsUrl } = require('./engine/analyzer');
 const { transcribeReelsAudio, analyzeCardImages, generateMultimodalInsight } = require('./engine/multimodal_analyzer');
 const { chromium } = require('playwright');
+const cardnewsPipeline = require('./engine/cardnews_pipeline');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/outputs', express.static(path.join(__dirname, 'outputs')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
@@ -483,6 +484,45 @@ app.post('/api/render', async (req, res) => {
     folder: folderName,
     images: generatedImages
   });
+});
+
+// 9. [createCardNews] 레퍼런스 스타일 카드뉴스 캐러셀 제작/확인 API
+app.get('/api/cardnews/reports', (req, res) => {
+  res.json({ success: true, reports: cardnewsPipeline.listReports() });
+});
+
+app.get('/api/cardnews/report/:folder', (req, res) => {
+  try {
+    res.json({ success: true, ...cardnewsPipeline.getReport(req.params.folder) });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/cardnews/create', (req, res) => {
+  try {
+    const { folder, slideCount, imageMode, extraContext, userRequest, handle } = req.body;
+    const job = cardnewsPipeline.startCreateJob({ folder, slideCount, imageMode, extraContext, userRequest, handle });
+    res.json({ success: true, jobId: job.id });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/cardnews/jobs/:id', (req, res) => {
+  const job = cardnewsPipeline.getJob(req.params.id);
+  if (!job) return res.status(404).json({ error: '작업을 찾을 수 없습니다.' });
+  res.json({ success: true, job });
+});
+
+app.post('/api/cardnews/rerender', async (req, res) => {
+  try {
+    const { folder, spec } = req.body;
+    const result = await cardnewsPipeline.rerender(folder, spec);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 app.listen(PORT, () => {

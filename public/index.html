@@ -35,6 +35,7 @@
         <button class="tab-btn" data-tab="tab-account">👥 2. 특정 릴스 계정 전수 수집 (전날 0시~현재)</button>
         <button class="tab-btn" data-tab="tab-estate">📰 3. 핫이슈 뉴스 자동 수집 (부동산·정치)</button>
         <button class="tab-btn" data-tab="tab-reels">🔍 4. 릴스 URL 떡상 역분석</button>
+        <button class="tab-btn" data-tab="tab-cardnews" id="tab-btn-cardnews">🎨 5. 카드뉴스 제작 & 캐러셀</button>
       </nav>
 
       <!-- TAB 1: Topic-based Instagram Trends (20 Posts + Best 5 Highlighting) -->
@@ -127,6 +128,96 @@
           </div>
         </div>
       </section>
+
+      <!-- TAB 5: createCardNews — 레퍼런스 스타일 카드뉴스 제작 & 캐러셀 확인 -->
+      <section class="tab-content" id="tab-cardnews" style="display: none;">
+        <div class="cn-layout">
+          <!-- 좌: 제작 설정 -->
+          <div class="cn-controls control-panel">
+            <div class="cn-head">
+              <div>
+                <div style="font-weight: 800; font-size: 15px;">🎨 createCardNews 스튜디오</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">report.md → 대본 → 배경 이미지 → 레퍼런스 스타일 렌더링</div>
+              </div>
+              <img src="/templates/reference_card.png" alt="레퍼런스 카드" class="cn-ref-thumb" title="레퍼런스 카드 디자인 (templates/reference_card.png)">
+            </div>
+
+            <label class="cn-label">📂 리포트 폴더</label>
+            <div class="input-row">
+              <select id="cn-report-select" class="custom-input"></select>
+              <button class="cn-icon-btn" id="cn-refresh-btn" title="목록 새로고침">↻</button>
+            </div>
+            <details class="cn-report-details">
+              <summary>report.md 미리보기</summary>
+              <pre id="cn-report-preview"></pre>
+            </details>
+
+            <div class="cn-row2">
+              <div>
+                <label class="cn-label">슬라이드 장수</label>
+                <select id="cn-slide-count" class="custom-input">
+                  <option value="auto" selected>자동 (4~10장)</option>
+                  <option value="4">4장</option><option value="5">5장</option><option value="6">6장</option>
+                  <option value="7">7장</option><option value="8">8장</option><option value="10">10장</option>
+                </select>
+              </div>
+              <div>
+                <label class="cn-label">배경 이미지</label>
+                <select id="cn-image-mode" class="custom-input">
+                  <option value="all">전부 새로 생성 (OpenAI)</option>
+                  <option value="missing" selected>없는 것만 생성</option>
+                  <option value="none">생성 안 함 (기존/단색)</option>
+                </select>
+              </div>
+            </div>
+
+            <label class="cn-label">카드에 표시할 계정 핸들 (좌상단 브랜드 표기 · 업로드 계정 아님)</label>
+            <input type="text" id="cn-handle" class="custom-input" value="@zip__kok">
+
+            <label class="cn-label">추가 자료 (기사 원문·팩트 붙여넣기 — 대본의 사실 근거)</label>
+            <textarea id="cn-extra" class="custom-input" rows="4" placeholder="report.md 내용이 빈약하면 기사 본문이나 확인된 팩트를 붙여넣으세요. 여기 없는 사실은 대본에 쓰지 않습니다."></textarea>
+
+            <label class="cn-label">요청사항</label>
+            <textarea id="cn-request" class="custom-input" rows="2" placeholder="예: 중립 톤으로, 3장은 일정 타임라인으로"></textarea>
+
+            <button class="generate-btn" id="cn-create-btn" style="background: linear-gradient(135deg, #DB2777 0%, #F472B6 100%);">
+              <span>🎨</span> 카드뉴스 캐러셀 제작
+            </button>
+            <div class="cn-cost-hint">이미지 생성 시 OpenAI 요금이 부과됩니다 (gpt-image-2 medium, 장당 약 $0.05).</div>
+
+            <div id="cn-progress" class="cn-progress" style="display: none;">
+              <div id="cn-progress-step" class="cn-progress-step"></div>
+              <pre id="cn-progress-log"></pre>
+            </div>
+          </div>
+
+          <!-- 우: 캐러셀 미리보기 -->
+          <div class="cn-viewer control-panel">
+            <div class="cn-viewer-head">
+              <span id="cn-viewer-title">캐러셀 미리보기</span>
+              <span id="cn-viewer-count" class="cn-count"></span>
+            </div>
+            <div id="cn-notes" class="cn-notes" style="display: none;"></div>
+            <div class="cn-stage" id="cn-stage">
+              <button class="cn-nav prev" id="cn-prev" aria-label="이전">‹</button>
+              <div class="cn-frame"><div class="cn-track" id="cn-track"></div><div class="cn-empty" id="cn-empty">아직 만든 카드가 없습니다.<br>왼쪽에서 리포트를 고르고 제작을 눌러주세요.</div></div>
+              <button class="cn-nav next" id="cn-next" aria-label="다음">›</button>
+            </div>
+            <div class="cn-dots" id="cn-dots"></div>
+            <div class="cn-thumbs" id="cn-thumbs"></div>
+            <div class="cn-actions">
+              <a id="cn-download" class="cn-small-btn" download>⬇ 현재 장 다운로드</a>
+              <button id="cn-download-all" class="cn-small-btn">⬇ 전체 다운로드</button>
+              <button id="cn-edit-toggle" class="cn-small-btn">✏️ 문구 수정</button>
+            </div>
+            <div id="cn-editor" class="cn-editor" style="display: none;">
+              <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">spec.json — <code>[[단어]]</code> = 핑크 강조, <code>\n</code> = 줄바꿈. 수정 후 다시 렌더링 (이미지 재생성 없음, 무료).</div>
+              <textarea id="cn-spec-text" class="custom-input" rows="14" spellcheck="false"></textarea>
+              <button class="generate-btn" id="cn-rerender-btn" style="margin-top: 8px;"><span>🔁</span> 수정 내용으로 다시 렌더링</button>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- Right Sidebar: 4-Step Interactive Card News Studio -->
@@ -210,6 +301,9 @@
             <span id="saved-folder-badge" style="font-size: 11px; background: rgba(16, 185, 129, 0.25); color: #A7F3D0; padding: 2px 8px; border-radius: 4px; font-weight: 700;"></span>
           </div>
           <div id="saved-file-path" style="font-size: 12px; color: var(--text-main); word-break: break-all;"></div>
+          <button class="generate-btn" id="cn-from-report-btn" style="background: linear-gradient(135deg, #DB2777 0%, #F472B6 100%);">
+            <span>🎨</span> 이 리포트로 카드뉴스 제작 ➔
+          </button>
           <div id="report-markdown-preview" style="font-size: 11px; color: var(--text-muted); background: rgba(0,0,0,0.4); padding: 10px; border-radius: 6px; max-height: 180px; overflow-y: auto; white-space: pre-wrap; line-height: 1.45;"></div>
         </div>
       </div>
@@ -218,5 +312,6 @@
   </div>
 
   <script src="app.js"></script>
+  <script src="cardnews.js"></script>
 </body>
 </html>
