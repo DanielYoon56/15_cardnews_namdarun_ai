@@ -5,19 +5,29 @@
  *   IG_USER_ID       인스타 비즈니스/크리에이터 계정 ID (숫자)
  *   IG_ACCESS_TOKEN  instagram_content_publish 권한이 있는 액세스 토큰
  *                    (EAA... = 페이스북 로그인 → graph.facebook.com / IGAA... = 인스타 로그인 → graph.instagram.com, 자동 판별)
- *   PUBLIC_BASE_URL  인스타 서버가 이미지를 가져갈 수 있는 이 서버의 공개 주소 (예: https://xxxx.ngrok-free.app)
- *                    localhost 는 인스타가 접근할 수 없어 업로드가 실패한다.
+ *
+ *   이미지 공개 방법 (둘 중 하나, Cloudinary 우선):
+ *   CLOUDINARY_URL   cloudinary://<api_key>:<api_secret>@<cloud_name>  (Cloudinary 대시보드에서 복사)
+ *                    → 카드 JPEG를 Cloudinary에 임시 업로드 → 인스타 게시 → 게시 후 자동 삭제. 대시보드는 공개되지 않음.
+ *   PUBLIC_BASE_URL  (대안) 이 서버의 공개 주소 (예: cloudflared 터널). localhost 불가.
+ *
  *   IG_GRAPH_VERSION (선택) 기본 v21.0
  *
- * 흐름: cards/slide_NN.png → 1080x1350 JPEG 변환(cards/ig/) → 장별 컨테이너 → 캐러셀 컨테이너 → 게시
+ * 흐름: cards/slide_NN.png → 1080x1350 JPEG 변환(cards/ig/) → 공개 URL 확보 → 장별 컨테이너 → 캐러셀 컨테이너 → 게시
  */
 const axios = require('axios');
+const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
 
-const pad2 = (n) => String(n).padStart(2, '0');
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+function parseCloudinary() {
+  const raw = (process.env.CLOUDINARY_URL || '').trim();
+  const m = raw.match(/^cloudinary:\/\/([^:]+):([^@]+)@(.+)$/);
+  return m ? { apiKey: m[1], apiSecret: m[2], cloudName: m[3] } : null;
+}
 
 function config() {
   const userId = (process.env.IG_USER_ID || '').trim();
@@ -25,13 +35,42 @@ function config() {
   const publicBase = (process.env.PUBLIC_BASE_URL || '').trim().replace(/\/+$/, '');
   const version = (process.env.IG_GRAPH_VERSION || 'v21.0').trim();
   const host = token.startsWith('IG') ? 'https://graph.instagram.com' : 'https://graph.facebook.com';
+  const cloudinary = parseCloudinary();
   const missing = [];
   if (!userId) missing.push('IG_USER_ID');
   if (!token) missing.push('IG_ACCESS_TOKEN');
-  if (!publicBase) missing.push('PUBLIC_BASE_URL');
-  else if (/localhost|127\.0\.0\.1/.test(publicBase)) missing.push('PUBLIC_BASE_URL(localhost 불가)');
-  return { userId, token, publicBase, base: `${host}/${version}`, missing };
+  if ((process.env.CLOUDINARY_URL || '').trim() && !cloudinary) missing.push('CLOUDINARY_URL(형식 오류: cloudinary://key:secret@cloud)');
+  else if (!cloudinary) {
+    if (!publicBase) missing.push('CLOUDINARY_URL 또는 PUBLIC_BASE_URL');
+    else if (/localhost|127\.0\.0\.1/.test(publicBase)) missing.push('PUBLIC_BASE_URL(localhost 불가)');
+  }
+  const imageHost = cloudinary ? 'cloudinary' : 'public_url';
+  return { userId, token, publicBase, cloudinary, imageHost, base: `${host}/${version}`, missing };
 }
+
+// ── Cloudinary (서명 업로드/삭제, SDK 없이 REST) ─────────────
+function cldSign(params, secret) {
+  const str = Object.keys(params).sort().map(k => `${k}=${params[k]}`).join('&');
+  return crypto.createHash('sha1').update(str + secret).digest('hex');
+}
+
+// params 는 서명 대상, unsigned(file 등)는 서명에서 제외
+async function cldCall(cld, action, params, unsigned = {}) {
+  const signed = { ...params, timestamp: Math.floor(Date.now() / 1000) };
+  const body = new URLSearchParams({ ...signed, ...unsigned, api_key: cld.apiKey, signature: cldSign(signed, cld.apiSecret) });
+  try {
+    const res = await axios.post(`https://api.cloudinary.com/v1_1/${cld.cloudName}/image/${action}`, body, { timeout: 120000, maxBodyLength: Infinity });
+    return res.data;
+  } catch (e) {
+    throw new Error(`Cloudinary ${action} 오류: ${e.response?.data?.error?.message || e.message}`);
+  }
+}
+
+const cldUpload = (cld, filePath, publicId) =>
+  cldCall(cld, 'upload', { folder: 'cardnews_ig', public_id: publicId },
+    { file: `data:image/jpeg;base64,${fs.readFileSync(filePath).toString('base64')}` });
+
+const cldDestroy = (cld, publicId) => cldCall(cld, 'destroy', { public_id: publicId, invalidate: 'true' });
 
 async function graph(method, url, params) {
   const { token } = config();
@@ -47,7 +86,7 @@ async function graph(method, url, params) {
 /** 설정 상태 + 연결된 계정 이름 확인 (토큰 값은 노출하지 않음) */
 async function status() {
   const cfg = config();
-  const out = { configured: !cfg.missing.length, missing: cfg.missing, publicBase: cfg.publicBase || null, username: null };
+  const out = { configured: !cfg.missing.length, missing: cfg.missing, imageHost: cfg.imageHost, username: null };
   if (cfg.userId && cfg.token) {
     try {
       const me = await graph('get', `${cfg.base}/${cfg.userId}`, { fields: 'username' });
@@ -116,18 +155,31 @@ function startPublishJob({ reportDir, folder, caption }) {
   running = true;
 
   (async () => {
+    const uploaded = []; // Cloudinary public_id (게시 후 삭제)
     try {
       log('🖼 JPEG 변환 중 (1080x1350)...');
       const jpgs = await toJpegs(cardsDir);
       const v = Date.now();
-      const urls = jpgs.map(f => `${cfg.publicBase}/outputs/${folder}/cards/ig/${f}?v=${v}`);
+      let urls;
+
+      if (cfg.cloudinary) {
+        urls = [];
+        for (let i = 0; i < jpgs.length; i++) {
+          log(`☁️ Cloudinary 임시 업로드 ${i + 1}/${jpgs.length}...`);
+          const r = await cldUpload(cfg.cloudinary, path.join(cardsDir, 'ig', jpgs[i]), `${folder}_${v}_${jpgs[i].replace(/\.jpg$/, '')}`);
+          uploaded.push(r.public_id);
+          urls.push(r.secure_url);
+        }
+      } else {
+        urls = jpgs.map(f => `${cfg.publicBase}/outputs/${folder}/cards/ig/${f}?v=${v}`);
+      }
 
       log('🌐 공개 URL 접근 확인 중...');
       try {
         const r = await axios.get(urls[0], { timeout: 15000, responseType: 'arraybuffer', headers: { 'ngrok-skip-browser-warning': '1' } });
         if (!/image\/jpeg/.test(r.headers['content-type'] || '')) throw new Error(`이미지가 아닌 응답 (${r.headers['content-type']})`);
       } catch (e) {
-        throw new Error(`PUBLIC_BASE_URL 로 이미지에 접근할 수 없습니다: ${urls[0]} — ${e.message}`);
+        throw new Error(`공개 URL 로 이미지에 접근할 수 없습니다: ${urls[0]} — ${e.message}`);
       }
 
       let creationId;
@@ -163,6 +215,12 @@ function startPublishJob({ reportDir, folder, caption }) {
       job.error = e.message;
       log(`❌ 실패: ${e.message}`);
     } finally {
+      // 인스타는 컨테이너 생성 시점에 이미지를 복사해 가므로, 게시 성공/실패와 무관하게 임시 파일 정리
+      if (uploaded.length) {
+        const results = await Promise.allSettled(uploaded.map(id => cldDestroy(cfg.cloudinary, id)));
+        const failed = results.filter(r => r.status === 'rejected').length;
+        job.logs.push(failed ? `⚠️ Cloudinary 임시 이미지 ${failed}개 삭제 실패 (cardnews_ig 폴더에서 수동 삭제)` : `🧹 Cloudinary 임시 이미지 ${uploaded.length}개 삭제`);
+      }
       running = false;
     }
   })();

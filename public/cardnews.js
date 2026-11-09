@@ -283,7 +283,7 @@
       igInfo = await api('/api/instagram/status');
       if (igInfo.configured) {
         els.igStatus.className = 'cn-ig-status ok';
-        els.igStatus.textContent = `✅ @${igInfo.username || '연결됨'}`;
+        els.igStatus.textContent = `✅ @${igInfo.username || '연결됨'} · ${igInfo.imageHost === 'cloudinary' ? 'Cloudinary' : '공개 URL'}`;
       } else {
         els.igStatus.className = 'cn-ig-status warn';
         els.igStatus.textContent = igInfo.error ? '⚠️ 토큰/계정 오류' : `⚠️ .env 설정 필요`;
@@ -301,7 +301,7 @@
     if (!cards.length) { alert('업로드할 카드가 없습니다. 먼저 카드뉴스를 제작하세요.'); return; }
     await checkIg();
     if (!igInfo?.configured) {
-      alert(`인스타그램 업로드 설정이 필요합니다.\n\n${igInfo?.error || `.env 에 추가: ${(igInfo?.missing || ['IG_USER_ID', 'IG_ACCESS_TOKEN', 'PUBLIC_BASE_URL']).join(', ')}`}\n\n설정 후 서버를 재시작하세요.`);
+      alert(`인스타그램 업로드 설정이 필요합니다.\n\n${igInfo?.error || `.env 에 추가: ${(igInfo?.missing || ['IG_USER_ID', 'IG_ACCESS_TOKEN', 'CLOUDINARY_URL']).join(', ')}`}\n\n설정 후 서버를 재시작하세요.`);
       return;
     }
     const caption = els.igCaption.value.trim();
